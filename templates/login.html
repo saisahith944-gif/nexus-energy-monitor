@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B1120">
+  <title>Sign in | Nexus Energy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+  <main class="login-shell">
+    <a class="login-brand" href="{{ url_for('login') }}" aria-label="Nexus Energy">
+      <span class="brand-mark">N</span>
+      <span>NEXUS <b>ENERGY</b><small>BUILDING INTELLIGENCE</small></span>
+    </a>
+    <section class="login-card">
+      <div class="login-eyebrow">SECURE ADMIN ACCESS</div>
+      <h1>Welcome back</h1>
+      <p>Sign in to manage building energy monitoring.</p>
+      {% if error %}<div class="login-error" role="alert">{{ error }}</div>{% endif %}
+      <form method="post" action="{{ url_for('login') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" required maxlength="128">
+        <label for="password">Password</label>
+        <input id="password" type="password" name="password" autocomplete="current-password" required>
+        <button type="submit">Sign in <span aria-hidden="true">→</span></button>
+      </form>
+    </section>
+    <p class="login-footer">Nexus Energy · Authorized administrators only</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B1120">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Nexus Energy | Building Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=energy-reference-16">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#dashboard" aria-label="Smart Energy Management dashboard">
+        <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M17 3C8 5 3 12 4 21c1 7 6 11 12 12-2-5-2-10 1-15-1 7 2 11 6 14 2-7 0-14-4-19 2 1 4 3 5 5 4-5 6-10 7-15-5 0-10 2-14 6z" fill="currentColor"/><path d="m24 2-8 15h6l-3 15 12-19h-7l4-11z" fill="#fbbf24"/></svg></span><span>SMART ENERGY<small>MANAGEMENT SYSTEM</small></span>
+      </a>
+      <div class="side-label">WORKSPACE</div>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="#dashboard" class="nav-link active" data-page="dashboard"><span aria-hidden="true">▦</span> Dashboard</a>
+        <a href="#building" class="nav-link" data-page="building"><span aria-hidden="true">▤</span> Building map</a>
+        <a href="#analytics" class="nav-link" data-page="analytics"><span aria-hidden="true">⌁</span> Energy analytics</a>
+        <a href="#dashboard" class="nav-link" data-page="dashboard" data-dashboard-target="dashboard-savings-panel"><span aria-hidden="true">₹</span> Cost &amp; savings</a>
+        <a href="#alerts" class="nav-link" data-page="alerts"><span aria-hidden="true">◇</span> Alerts <i id="nav-alert-count">0</i></a>
+        <a href="#history" class="nav-link" data-page="history"><span aria-hidden="true">▤</span> Reports</a>
+        <a href="#dashboard" class="nav-link" data-page="dashboard" data-dashboard-target="rail-quick-actions"><span aria-hidden="true">▶</span> Demo mode</a>
+      </nav>
+      <div class="side-label management-label">MANAGEMENT</div>
+      <nav class="main-nav">
+        <a href="#settings" class="nav-link" data-page="settings"><span aria-hidden="true">⚙</span> Settings</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-sustainability"><span class="sidebar-leaf" aria-hidden="true">ϟ</span><div><strong>GREENER BUILDINGS</strong><small>Estimated emissions</small><b><span id="sidebar-emissions">—</span> kg CO₂e</b></div></div>
+        <div class="sidebar-system"><span id="sidebar-connection-dot"></span><div><strong id="sidebar-connection-label">CHECKING SYSTEM</strong><small id="sidebar-connection-detail">Connecting to local database</small></div></div>
+        <div class="demo-note"><span class="demo-dot"></span><div><strong>DEMO MODE</strong><small>Manual readings · no meters connected</small></div></div>
+        <div class="profile"><div class="avatar">AD</div><div><strong>{{ username }}</strong><small>{{ "Authenticated administrator" if auth_enabled else "Demo administrator" }}</small></div>
+          {% if auth_enabled %}<form action="{{ url_for('logout') }}" method="post" class="logout-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="logout-button">Sign out</button></form>{% endif %}
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobile-menu" aria-label="Toggle navigation">☰</button>
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Collapse sidebar" title="Collapse sidebar">☰</button>
+        <div class="top-page-label"><div class="breadcrumb"><b id="page-title">Dashboard</b></div><div class="top-subtitle"><span>SMART ENERGY MANAGEMENT · SAVE ENERGY · SAVE COST · GREENER FUTURE</span><time id="today-label">Current date</time></div></div>
+        <div class="top-actions">
+          <div class="header-clock"><span>LOCAL TIME</span><b id="header-time">--:--</b></div>
+          <div class="top-building-chip"><span>BUILDING</span><b>Central Building</b></div>
+          <span class="live-pill checking" id="live-pill"><span></span><b id="live-label">CHECKING</b></span>
+          <button class="top-icon-button" id="notifications-button" aria-label="Open alerts center" title="Alerts center">◇<i id="notification-count">0</i></button>
+          <button class="button button-soft sound-toggle" id="sound-enable" aria-pressed="false">◖ <span>SOUND OFF</span></button>
+          <button class="button button-soft sound-test-button" id="test-sound">TEST SOUND</button>
+          <button class="button button-soft sound-test-button hidden" id="stop-sound" disabled>STOP SOUND</button>
+          <button class="button button-icon" id="mute-button" aria-pressed="false" title="Mute alert sounds">ALERTS ON</button>
+        </div>
+      </header>
+
+      <section id="critical-banner" class="critical-banner hidden" aria-live="assertive">
+        <div class="critical-symbol">!</div><div class="critical-copy"><strong>CRITICAL ELECTRICITY ALERT <span class="simulated-flag hidden" id="critical-simulated">SIMULATED EVENT</span></strong><span id="critical-summary">A room is above its expected limit.</span></div>
+        <button class="button button-white" id="banner-alerts">Review alerts <span>→</span></button>
+      </section>
+
+      <section class="page-view active" id="page-dashboard">
+        <div class="dashboard-hero">
+          <div class="hero-orb hero-orb-one" aria-hidden="true"></div><div class="hero-orb hero-orb-two" aria-hidden="true"></div>
+          <div class="hero-content">
+            <div class="hero-kicker"><span class="hero-live-dot"></span> BUILDING ENERGY OVERVIEW <span class="hero-demo-tag">DEMO MODE</span></div>
+            <h1>Central Building.<br><span>Energy overview.</span></h1>
+            <p>A current snapshot of manually recorded usage, room status, and estimated cost. No live meters are connected.</p>
+            <div class="hero-actions"><button class="button hero-primary" id="add-room-open">＋ Add a room</button><button class="button hero-secondary" id="simulate-alert">Simulate energy spike</button><button class="button hero-secondary hidden" id="stop-simulation">Stop simulation</button></div>
+            <div class="hero-foot"><span>Last refreshed <b id="last-updated">just now</b></span><span class="hero-foot-divider"></span><span>Polling every <b id="hero-refresh-interval">15 sec</b></span></div>
+          </div>
+          <div class="hero-insight">
+            <div class="hero-meter-card">
+              <div class="hero-meter-top"><span>MONTHLY USAGE</span><span class="hero-meter-icon">ϟ</span></div>
+              <div class="hero-meter">
+                <svg viewBox="0 0 100 100" role="img" aria-label="Building consumption compared with expected total">
+                  <circle class="hero-meter-track" cx="50" cy="50" r="42"></circle>
+                  <circle class="hero-meter-progress" id="hero-meter-progress" cx="50" cy="50" r="42"></circle>
+                </svg>
+                <div class="hero-meter-value"><strong id="hero-percent">—</strong><span>of expected</span></div>
+              </div>
+              <div class="hero-consumption-line"><strong id="hero-consumption">—</strong><span>kWh used</span></div>
+              <div class="hero-limit-line"><span>Building expected limit</span><b><span id="hero-limit">—</span> kWh</b></div>
+              <div class="hero-insight-divider"></div>
+              <div class="hero-leader"><span class="hero-leader-icon">⌂</span><div><span>HIGHEST FLOOR USAGE</span><strong id="hero-leading-floor">—</strong></div><b id="hero-leading-consumption">—</b></div>
+            </div>
+          </div>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-card energy-summary"><div class="summary-top"><span class="summary-icon cyan">ϟ</span><span class="summary-caption">MONTH TO DATE</span></div><strong><span id="stat-consumption">—</span><small>kWh</small></strong><span class="summary-label">Total energy usage</span><div class="summary-foot">Estimated run rate <b id="stat-today-usage">—</b> kWh/day</div></article>
+          <article class="summary-card cost-card"><div class="summary-top"><span class="summary-icon green">₹</span><span class="summary-caption">COST ESTIMATE</span></div><strong><span id="stat-cost">—</span></strong><span class="summary-label">Estimated electricity cost</span><div class="summary-foot">At configured price per kWh</div></article>
+          <article class="summary-card savings-summary-card"><div class="summary-top"><span class="summary-icon green">↘</span><span class="summary-caption">OPPORTUNITY</span></div><strong id="stat-savings">—</strong><span class="summary-label">Potential cost savings</span><div class="summary-foot">Estimated cost of excess usage</div></article>
+          <article class="summary-card warning-summary-card"><div class="summary-top"><span class="summary-icon amber">!</span><span class="summary-caption">WARNING ROOMS</span></div><strong id="stat-warning">—</strong><span class="summary-label">Approaching expected limit</span><div class="summary-foot">Based on current saved readings</div></article>
+          <article class="summary-card critical-summary-card"><div class="summary-top"><span class="summary-icon red">!</span><span class="summary-caption">CRITICAL ROOMS</span></div><strong id="stat-critical">—</strong><span class="summary-label">Above configured limit</span><div class="summary-foot">Review active room alerts</div></article>
+          <article class="summary-card carbon-summary-card"><div class="summary-top"><span class="summary-icon blue">CO₂</span><span class="summary-caption">CARBON ESTIMATE</span></div><strong><span id="stat-emissions">—</span><small>kg CO₂e</small></strong><span class="summary-label">Estimated emissions</span><div class="summary-foot">Using configured grid factor</div></article>
+        </div>
+        <section class="building-visual-section" id="building-energy-overview" aria-labelledby="building-visual-title">
+          <div class="building-visual-heading">
+            <div><div class="eyebrow">INTERACTIVE BUILDING MODEL</div><h2 id="building-visual-title">Building energy overview</h2><p>Choose a room to inspect its latest saved reading, expected limit, and alert history.</p></div>
+            <div class="building-floor-switch" role="group" aria-label="Focus building floor">
+              <button type="button" class="building-floor-button active" data-building-floor="all" aria-pressed="true">All floors</button>
+              <button type="button" class="building-floor-button" data-building-floor="3" aria-pressed="false">Floor 3</button>
+              <button type="button" class="building-floor-button" data-building-floor="2" aria-pressed="false">Floor 2</button>
+              <button type="button" class="building-floor-button" data-building-floor="1" aria-pressed="false">Floor 1</button>
+            </div>
+          </div>
+          <div class="building-model-layout">
+            <div class="building-model-stage">
+              <div class="building-model-skyline" aria-hidden="true"><span></span><span></span><span></span></div>
+              <div id="building-model" class="building-model" aria-label="Interactive three-floor building room map"></div>
+              <div class="building-model-legend" aria-label="Room status legend">
+                <span><i class="status-dot normal"></i> Normal</span><span><i class="status-dot warning"></i> Warning</span><span><i class="status-dot critical"></i> Critical</span><span><i class="status-dot unknown"></i> No recent reading</span>
+              </div>
+              <p class="building-model-note" id="building-extra-rooms-note"></p>
+            </div>
+            <aside class="building-model-summary" aria-label="Building status summary">
+              <div class="model-status-head"><span class="model-status-icon">⌂</span><div><strong>Central Building</strong><small>15-room demonstration map · manual readings</small></div></div>
+              <div class="model-primary-stat"><span>Recorded consumption</span><strong><b id="model-total-consumption">—</b><small>kWh</small></strong></div>
+              <div class="model-floor-lead"><span>Highest-use floor</span><strong id="model-leading-floor">—</strong></div>
+              <div class="model-floor-totals" id="model-floor-totals"></div>
+              <div class="model-status-counts"><span><i class="status-dot normal"></i><b id="model-normal-count">0</b> normal</span><span><i class="status-dot warning"></i><b id="model-warning-count">0</b> warning</span><span><i class="status-dot critical"></i><b id="model-critical-count">0</b> critical</span><span><i class="status-dot unknown"></i><b id="model-unknown-count">0</b> no recent reading</span></div>
+              <div class="model-last-update"><span>Latest saved room update</span><strong id="model-last-update">—</strong></div>
+            </aside>
+          </div>
+        </section>
+        <article class="panel demo-scenarios" id="dashboard-demo-scenarios"><div><div class="eyebrow">INTERACTIVE DEMONSTRATION</div><h2>Try a reading scenario</h2><p>Scenarios are tagged, reversible, and separate from manually submitted readings.</p></div><div class="demo-scenario-actions" id="demo-scenario-actions"><button class="button button-soft" data-scenario="normal">Normal usage</button><button class="button button-soft" data-scenario="spike">Sudden spike</button><button class="button button-soft" data-scenario="sustained">Sustained high</button><button class="button button-soft" data-scenario="after_hours">After-hours event</button></div></article>
+        <div class="status-strip" id="dashboard-status-strip">
+          <div class="status-intro"><span class="status-ring">✓</span><div><strong>Room status</strong><small>Compared with expected limits</small></div></div>
+          <div class="status-total"><b class="text-green" id="stat-normal">0</b><span>Normal</span></div>
+          <div class="status-total"><b class="text-orange" id="stat-warning">0</b><span>Warning</span></div>
+          <div class="status-total"><b class="text-red" id="status-critical-count">0</b><span>Critical</span></div>
+          <div class="status-total"><b id="stat-no-reading">0</b><span>No recent reading</span></div>
+          <div class="status-total status-room-count"><b id="stat-rooms">0</b><span>Rooms monitored</span></div>
+        </div>
+        <div class="section-heading" id="dashboard-floor-heading"><div><div class="eyebrow">BUILDING OVERVIEW</div><h2>Floor-by-floor usage</h2></div><div class="section-tools"><label class="search-box">⌕ <input id="room-search" placeholder="Search rooms..." aria-label="Search rooms"></label><select id="floor-filter" aria-label="Filter by floor"><option value="">All floors</option></select><a href="#building" class="text-link">View all floors <span>→</span></a></div></div>
+        <div id="floor-cards" class="floor-grid"></div>
+        <div class="content-grid dashboard-lower">
+          <article class="panel chart-panel"><div class="panel-heading"><div><div class="eyebrow">CONSUMPTION HISTORY</div><h2>Consumption trend</h2><p class="panel-caption">Saved reading snapshots · not meter telemetry</p></div><div class="chart-filter-tools"><select id="top-date-range" aria-label="Consumption trend date range"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="365">12 months</option></select><select id="chart-floor-filter" aria-label="Chart floor filter"><option value="">All floors</option></select><select id="chart-room-filter" aria-label="Chart room filter"><option value="">All rooms</option></select></div></div><div class="chart-periods" role="group" aria-label="Reading trend period"><button class="period-button active" data-period="daily">Daily</button><button class="period-button" data-period="weekly">Weekly</button><button class="period-button" data-period="monthly">Monthly</button></div><div class="chart-wrap"><canvas id="usage-chart"></canvas><div id="chart-empty" class="chart-empty hidden">No saved reading snapshots for this selection.</div></div></article>
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">ROOM RANKING</div><h2>Highest-consuming rooms</h2></div><a href="#insights" class="text-link">View all →</a></div><div id="dashboard-ranking" class="ranking-list"></div></article>
+        </div>
+        <div class="dashboard-bottom-grid">
+          <article class="panel dashboard-savings-panel" id="dashboard-savings-panel"><div class="panel-heading"><div><div class="eyebrow">ENERGY COST & SAVINGS SIMULATOR</div><h2>Estimated monthly cost</h2></div><a href="#settings" class="text-link">Tariff settings →</a></div>
+            <form class="dashboard-tariff-form" id="dashboard-tariff-form"><label for="dashboard-tariff">Electricity tariff <small>₹ / kWh</small></label><input id="dashboard-tariff" type="number" min="0" step="0.01" required aria-label="Electricity tariff per kWh"><button class="button button-primary" type="submit">Save</button><span id="dashboard-tariff-message" aria-live="polite"></span></form>
+            <label class="dashboard-reduction-control">Consumption reduction
+              <select id="dashboard-reduction" aria-label="Savings simulation reduction"><option value="10">10%</option><option value="20" selected>20%</option><option value="30">30%</option></select>
+            </label>
+            <div class="dashboard-cost-comparison"><div><span>Current estimated cost</span><strong id="dashboard-current-cost">—</strong></div><div><span>Projected cost</span><strong id="dashboard-projected-cost">—</strong></div><div class="dashboard-potential-saving"><span>Potential savings · estimate</span><strong id="dashboard-projected-saving">—</strong></div></div>
+            <p class="dashboard-estimate-note">Scenario applies the selected reduction to saved consumption at this tariff. Savings are an estimate, not a guaranteed bill reduction.</p>
+          </article>
+          <article class="panel dashboard-carbon-chart-panel"><div class="panel-heading"><div><div class="eyebrow">SUSTAINABILITY ESTIMATE</div><h2>Carbon emissions</h2></div><a href="#settings" class="text-link">Factor →</a></div><div id="dashboard-carbon-bars" class="dashboard-carbon-bars"></div><p class="dashboard-estimate-note">Daily and weekly values use the current month-to-date run rate; monthly is recorded month-to-date. Estimates use the configured emissions factor.</p></article>
+        </div>
+      </section>
+
+      <aside class="dashboard-rail" id="dashboard-rail" aria-label="Dashboard actions and system overview">
+        <section class="rail-panel rail-alert-panel">
+          <div class="rail-panel-heading"><div><span class="rail-kicker">LIVE MONITORING</span><h2>Critical alert</h2></div><a href="#alerts" class="rail-link">View all →</a></div>
+          <div id="active-alerts" class="compact-alerts"></div>
+          <a class="rail-alert-count" href="#alerts"><span id="active-count">0</span> unresolved alerts <b>→</b></a>
+        </section>
+        <section class="rail-panel rail-quick-panel" id="rail-quick-actions">
+          <div class="rail-panel-heading"><div><span class="rail-kicker">SHORTCUTS</span><h2>Quick actions</h2></div></div>
+          <button type="button" class="rail-action rail-action-demo" data-scenario="spike"><span>▶</span> Sudden energy spike</button>
+          <div class="rail-scenarios" aria-label="Other demo scenarios"><button type="button" data-scenario="normal">Normal</button><button type="button" data-scenario="sustained">High use</button><button type="button" data-scenario="after_hours">After hours</button></div>
+          <button type="button" class="rail-action rail-action-stop hidden" id="rail-stop-simulation"><span>■</span> Stop simulation</button>
+          <button type="button" class="rail-action rail-action-map" id="rail-add-room-open"><span>＋</span> Add a room</button>
+          <a class="rail-action rail-action-report" href="/api/reports.csv"><span>▤</span> Generate report</a>
+          <a class="rail-action rail-action-report" href="/api/reports.csv"><span>⇩</span> Export CSV</a>
+          <a class="rail-action rail-action-map" href="#building"><span>⌂</span> Open building map</a>
+          <a class="rail-action rail-action-settings" href="#settings"><span>⚙</span> Settings</a>
+        </section>
+        <section class="rail-panel rail-recommendations-panel">
+          <div class="rail-panel-heading"><div><span class="rail-kicker">DATA-DRIVEN INSIGHTS</span><h2>Smart recommendations</h2></div><a href="#insights" class="rail-link">View all →</a></div>
+          <div id="dashboard-insights" class="insight-list"></div>
+          <p class="rail-data-note">Based on saved readings; suggestions are not proof of wastage.</p>
+        </section>
+      </aside>
+
+      <section class="page-view" id="page-building">
+        <div class="page-heading"><div><div class="eyebrow">SPACE DIRECTORY</div><h1>Building overview</h1><p>Room-by-room consumption and status across all monitored floors.</p></div><button class="button button-primary" id="add-room-open-building">＋ Add room</button></div>
+        <div id="building-summary" class="building-summary"></div>
+        <section class="building-floorplan panel" aria-labelledby="floorplan-title">
+          <div class="panel-heading"><div><div class="eyebrow">INTERACTIVE FLOOR PLAN</div><h2 id="floorplan-title">Explore the building</h2><p class="panel-caption">Illustrated room layout · select any space to view its saved details</p></div><span class="floorplan-scale-note">Visual guide · not to architectural scale</span></div>
+          <div id="building-floorplan-map" class="building-floorplan-map" aria-label="Interactive floor plan with 15 selectable rooms"></div>
+          <div class="building-model-legend floorplan-legend" aria-label="Room status legend">
+            <span><i class="status-dot normal"></i> Normal</span><span><i class="status-dot warning"></i> Warning</span><span><i class="status-dot critical"></i> Critical</span><span><i class="status-dot unknown"></i> No recent reading</span>
+          </div>
+        </section>
+        <div class="section-tools standalone-tools"><label class="search-box">⌕ <input id="building-search" placeholder="Search by room number..." aria-label="Search rooms"></label><select id="building-floor-filter" aria-label="Filter by floor"><option value="">All floors</option></select><select id="building-status-filter" aria-label="Filter rooms by status"><option value="">All statuses</option><option value="Normal">Normal</option><option value="Warning">Warning</option><option value="Critical">Critical</option><option value="No recent reading">No recent reading</option></select></div>
+        <div id="building-floor-cards" class="floor-grid"></div>
+      </section>
+
+      <section class="page-view" id="page-analytics">
+        <div class="page-heading"><div><div class="eyebrow">INSIGHTS & TRENDS</div><h1>Consumption analytics</h1><p>Compare actual readings with expected limits and historical trends.</p></div><span class="panel-tag">DEMO HISTORY + MANUAL READINGS</span></div>
+        <div class="analytics-tools panel"><label>Potential reduction <span>estimate</span><select id="savings-reduction"><option value="10">10% reduction</option><option value="20" selected>20% reduction</option><option value="30">30% reduction</option></select></label><div><span>Projected consumption</span><b id="projected-consumption">—</b></div><div><span>Projected cost</span><b id="projected-cost">—</b></div><div><span>Estimated savings</span><b id="projected-savings">—</b></div><div><span>Estimated emissions</span><b id="projected-emissions">—</b></div><a class="button button-soft" id="export-report" href="/api/reports.csv">Export CSV report</a></div>
+        <div class="analytics-grid">
+          <article class="panel wide-chart"><div class="panel-heading"><div><div class="eyebrow">MONTHLY USAGE</div><h2>Floor-wise comparison</h2></div></div><div class="chart-wrap tall"><canvas id="analytics-floor-chart"></canvas></div></article>
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">ROOM COMPARISON</div><h2>Actual vs expected</h2></div></div><div class="chart-wrap tall"><canvas id="room-chart"></canvas></div></article>
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">HISTORY</div><h2>Monthly reading snapshots</h2></div></div><div class="chart-wrap tall"><canvas id="history-chart"></canvas></div></article>
+          <article class="panel wide-chart"><div class="panel-heading"><div><div class="eyebrow">RECENT READINGS</div><h2>Daily reading snapshots</h2></div></div><div class="chart-wrap tall"><canvas id="daily-chart"></canvas></div></article>
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">ALERT HISTORY</div><h2>Alerts by date</h2></div></div><div class="chart-wrap tall"><canvas id="alert-frequency-chart"></canvas></div></article>
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">COST ESTIMATE</div><h2>Estimated cost by floor</h2></div></div><div class="chart-wrap tall"><canvas id="floor-cost-chart"></canvas></div></article>
+        </div>
+        <p class="footnote">Charts use saved reading snapshots (monthly cumulative room readings), not interval-meter telemetry. Alerts and cost use the current saved values.</p>
+      </section>
+
+      <section class="page-view" id="page-history">
+        <div class="page-heading"><div><div class="eyebrow">METER READING LOG</div><h1>Consumption history</h1><p>Review readings saved to the local database, including clearly marked demo events.</p></div><span class="panel-tag">MANUAL / DEMO READINGS</span></div>
+        <div class="section-tools standalone-tools history-filters"><label class="search-box">⌕ <input id="history-search" placeholder="Search rooms or notes..." aria-label="Search reading history"></label><select id="history-floor-filter" aria-label="Filter history by floor"><option value="">All floors</option></select><select id="history-room-filter" aria-label="Filter history by room"><option value="">All rooms</option></select><label class="date-filter">From <input type="date" id="history-start"></label><label class="date-filter">To <input type="date" id="history-end"></label><a class="button button-soft" id="export-history" href="/api/reports.csv">Export readings + alerts CSV</a></div>
+        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>ROOM</th><th>FLOOR</th><th>READING</th><th>RECORDED AT</th><th>NOTES / SOURCE</th></tr></thead><tbody id="history-table"><tr><td colspan="5" class="empty-cell">Loading saved readings...</td></tr></tbody></table></div></div>
+      </section>
+
+      <section class="page-view" id="page-insights">
+        <div class="page-heading"><div><div class="eyebrow">EFFICIENCY OPPORTUNITIES</div><h1>Energy-saving insights</h1><p>Prioritized from current room readings and saved alert history. Savings are estimates, not guarantees.</p></div><span class="panel-tag">CALCULATED FROM APP DATA</span></div>
+        <div id="insight-summary" class="insight-summary-grid"></div>
+        <div class="insight-page-grid"><article class="panel"><div class="panel-heading"><div><div class="eyebrow">CONSUMPTION RANKINGS</div><h2>Top rooms by usage</h2></div><select id="ranking-mode" aria-label="Room ranking mode"><option value="consumption">Highest total usage</option><option value="relative">Highest % of limit</option><option value="average">Largest vs historical average</option><option value="alerts">Most critical alerts</option></select></div><div id="insight-ranking" class="ranking-list"></div></article><article class="panel"><div class="panel-heading"><div><div class="eyebrow">INSPECTION PRIORITIES</div><h2>Rooms to review</h2></div></div><div id="inspection-list" class="insight-list"></div></article></div>
+        <p class="footnote">A high or rising reading can have many causes. These are prompts to inspect equipment and compare periods, not proof of waste.</p>
+      </section>
+
+      <section class="page-view" id="page-alerts">
+        <div class="page-heading"><div><div class="eyebrow">EVENT CENTER</div><h1>Alerts history</h1><p>Reasons and values show why a reading was flagged; alerts identify possible issues, not confirmed wastage.</p></div><span class="panel-tag">MOST RECENT FIRST</span></div>
+        <div class="section-tools standalone-tools alert-filters"><label class="search-box">⌕ <input id="alert-search" placeholder="Search room or message..." aria-label="Search alerts"></label><select id="alert-severity-filter" aria-label="Filter by severity"><option value="">All severities</option><option value="CRITICAL">Critical</option><option value="WARNING">Warning</option><option value="NORMAL">Normal / resolved</option></select><select id="alert-floor-filter" aria-label="Filter alerts by floor"><option value="">All floors</option></select><select id="alert-room-filter" aria-label="Filter alerts by room"><option value="">All rooms</option></select><label class="date-filter">From <input type="date" id="alert-start"></label><label class="date-filter">To <input type="date" id="alert-end"></label></div>
+        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>SEVERITY</th><th>LOCATION</th><th>CONSUMPTION</th><th>EXPECTED LIMIT</th><th>EXCESS</th><th>DATE & TIME</th><th>STATUS</th><th>REASON</th><th>ACTION</th></tr></thead><tbody id="alerts-table"><tr><td colspan="9" class="empty-cell">Loading alerts...</td></tr></tbody></table></div></div>
+      </section>
+
+      <section class="page-view" id="page-settings">
+        <div class="page-heading"><div><div class="eyebrow">CONFIGURATION</div><h1>Monitoring settings</h1><p>Configure consumption thresholds, electricity rates, and refresh behavior.</p></div></div>
+        <div class="settings-layout"><form id="settings-form" class="panel settings-form">
+          <div class="panel-heading"><div><div class="eyebrow">ALERT & COST RULES</div><h2>System preferences</h2></div></div>
+          <label>Electricity price <span>per kWh (estimate)</span><div class="input-unit"><b>₹</b><input type="number" min="0" step="0.01" name="electricity_price_per_kwh" required></div></label>
+          <label>Emissions factor <span>kg CO₂e per kWh (estimate)</span><div class="input-unit"><input type="number" min="0" step="0.001" name="emissions_factor_kg_per_kwh" required><b>kg/kWh</b></div></label>
+          <label>Expected limit above historical average <span>e.g. 20% sets limit to average × 1.20</span><div class="input-unit"><input type="number" min="0" step="1" name="expected_increase_percentage" required><b>%</b></div></label>
+          <div class="field-row"><label>Warning threshold <span>of expected limit</span><div class="input-unit"><input type="number" min="0" max="99" step="1" name="warning_threshold_percentage" required><b>%</b></div></label><label>Critical threshold <span>over 100% is always critical</span><div class="input-unit"><input type="number" min="1" max="100" step="1" name="critical_threshold_percentage" required><b>%</b></div></label></div>
+          <label>Dashboard refresh interval <span>5 to 300 seconds</span><div class="input-unit"><input type="number" min="5" max="300" step="1" name="refresh_interval_seconds" required><b>sec</b></div></label>
+          <label class="settings-checkbox"><input type="checkbox" name="sound_enabled"><span><b>Enable sound alerts</b><small>Browser sound still requires a user gesture before playback.</small></span></label>
+          <div class="form-actions"><span id="settings-message" aria-live="polite"></span><button class="button button-primary" type="submit">Save settings</button></div>
+        </form>
+        <article class="panel settings-info"><div class="settings-info-icon">ϟ</div><div class="eyebrow">HOW LIMITS WORK</div><h2>Compare fairly. Act early.</h2><p>The expected limit is calculated from each room's historical monthly average and the configured increase percentage. Warning and critical thresholds are then applied to that limit.</p><div class="rule"><i class="status-dot normal"></i><span><b>Normal</b> below the warning threshold</span></div><div class="rule"><i class="status-dot warning"></i><span><b>Warning</b> at or above warning threshold</span></div>        <div class="rule"><i class="status-dot critical"></i><span><b>Critical</b> above the expected limit, or at the configured critical threshold</span></div><div class="rule"><i class="status-dot unknown"></i><span><b>No recent reading</b> no saved sample within 45 days</span></div><p class="disclaimer">High use is a signal to inspect, not proof of wastage. No smart meters are connected in this demo.</p><p class="disclaimer">Carbon estimate = recorded kWh × configured grid emissions factor; adjust factor for your region.</p></article></div>
+        <article class="panel reset-card"><div><div class="eyebrow">DEMONSTRATION</div><h2>Restore sample readings</h2><p>Restore original room values. Existing readings and alert history are retained.</p></div><button class="button button-danger-outline" id="reset-demo">Reset demo data</button></article>
+      </section>
+
+      <section class="page-view" id="page-room">
+        <div class="room-back"><button class="text-link" id="room-back">← Back to building</button></div>
+        <div id="room-detail-content"></div>
+      </section>
+      <footer class="app-footer"><span>WattWatch · Electricity monitoring demo</span><span>Readings are manually entered sample data · Costs are estimates</span></footer>
+    </main>
+  </div>
+  <div class="modal-backdrop hidden" id="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" id="modal-close" aria-label="Close">×</button><div class="eyebrow">ROOM MANAGEMENT</div><h2 id="modal-title">Add a room</h2><form id="room-form"><input type="hidden" name="id"><label>Room number<input name="room_number" required maxlength="20" placeholder="e.g. 106"></label><label>Floor number<input name="floor_number" required type="number" min="1" step="1" placeholder="1"></label><label>Historical monthly average <span>kWh</span><input name="average_monthly_consumption" required type="number" min="0" step="0.1"></label><label>Expected monthly limit <span>kWh</span><input name="expected_consumption_limit" required type="number" min="0.1" step="0.1"></label><label>Current consumption <span>kWh</span><input name="current_consumption" required type="number" min="0" step="0.1" value="0"></label><div class="form-actions"><span id="room-form-message" aria-live="polite"></span><button class="button button-primary" type="submit">Save room</button></div></form></div>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="{{ url_for('static', filename='js/sound.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}?v=energy-reference-16" defer></script>
+</body>
+</html>
